@@ -1,0 +1,105 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Add Meal</li>
+                </ol>
+            </nav>
+            <div class="col d-flex justify-content-between align-item-center">
+                <h1 class="h3">Add Meal</h1>
+            </div>
+        </div>
+    </div>
+
+    <form action="/dashboard/add" method="POST">
+      <!-- Input field -->
+      
+      <div class="form-group mb-4">
+        <input type="text" class="form-control fw-bold border-0 fs-4" id="title" name="title" value="<%= genOut["name"] %>" placeholder="Name" style="width: 100%;">
+      </div>
+
+      <div class="form-group mb-4">
+        <div class="card border-primary" style="width: 100%; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+          <div class="row g-0 d-flex align-items-stretch">
+            <div class="col-md-4">
+              <div style="height:100%; overflow: hidden;">
+              <img src="/<%= filepath %>" class="card-img" alt="pasta image" style="width: 100%; height: auto; min-height:100%; object-fit: cover; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-right: 1px solid #0043a8; border-left: none;"> 
+              </div>
+            </div>
+            <div class="col-md-8 d-flex flex-column">
+              <div class="card-body">
+                <h5 class="card-title">Ingredients</h5>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <td>(Per 100g)</th>
+                      <th scope="col">Calories</th>
+                      <th scope="col">Protein</th>
+                      <th scope="col">Fat</th>
+                      <th scope="col">Carbs</th>
+                      <th scope="col">Sugars</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  <% if(genOut["ingredients"].length > 0) { for(var i=0; i<genOut["ingredients"].length; i++) { %>
+                    <tr>
+                      <th scope="col"><%= genOut["ingredients"][i] %></td>
+                      <td ><%= genOut["ninf"][i][0] %> cal</td>
+                      <td ><%= genOut["ninf"][i][1] %> g</td>
+                      <td ><%= genOut["ninf"][i][2] %> g</td>
+                      <td ><%= genOut["ninf"][i][3] %> g</td>
+                      <td ><%= genOut["ninf"][i][4] %> g</td>
+                    </tr>
+                  <% }} %>
+                  </tbody>
+                </table>
+
+                <br>
+                <h5 class="card-title">Net Nutrition</h5>
+
+                <table class="table">
+                  <!-- <thead>
+                    <tr>
+                      <td scope="col">(Net)</th>
+                      <th scope="col">Value</th>
+
+                    </tr>
+                  </thead> -->
+                  <tbody>
+                    <tr>
+                      <th scope="row">Calories</th>
+                      <td><%= genOut["netinf"][0] %> Cal</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Protein</th>
+                      <td><%= genOut["netinf"][1] %> g</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Fat</th>
+                      <td><%= genOut["netinf"][2] %> g</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Carbs</th>
+                      <td><%= genOut["netinf"][3] %> g</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" id="genout" name="genout" value="<%= JSON.stringify(genOut) %>">
+      <input type="hidden" id="path" name="path" value="<%= filepath %>">
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-lg">Add Meal</button>
+        </div>
+
+      </form>
+    
+
+</div>

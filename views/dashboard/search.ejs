@@ -1,0 +1,22 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+
+    <div class="row row-cols-2 row-cols-lg-5 g-2 g-lg-3">
+
+        <% if(searchResults != '') { %>
+
+            <% searchResults.forEach(function(meal, index){ %>
+                <a href="/dashboard/item/<%= meal._id %>">
+                    <h4><%= meal.name %></h4>
+                </a>
+
+            <% }) %>
+
+        <% } else { %>
+
+            <p>No meals found.</p>
+
+        <% } %>
+
+    </div>
+
+</div>

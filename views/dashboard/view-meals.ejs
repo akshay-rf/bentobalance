@@ -1,0 +1,128 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item active"><%= meal.name %></li>
+                </ol>
+            </nav>
+            <div class="col d-flex justify-content-between align-item-center">
+                <h1 class="h3">View Meal</h1>
+                <button type="button" class="btn btn-danger me2" data-bs-toggle="modal" id="deleteButton" data-bs-target="#deleteModal">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <form action="/dashboard/item/<%= mealId %>?_method=PUT" method="POST">
+      <!-- Input field -->
+      <div class="form-group mb-4">
+        <input type="text" class="form-control fw-bold border-0 fs-4" id="title" name="title" value="<%= meal.name %>" placeholder="Name" style="width: 100%;">
+      </div>
+    
+      <div class="form-group mb-4">
+        <div class="card border-primary" style="width: 100%; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+          <div class="row g-0 d-flex align-items-stretch">
+            <div class="col-md-4">
+              <div style="height:100%; overflow: hidden;">
+              <img src="/<%= meal.image %>" class="card-img" alt="pasta image" style="width: 100%; height: auto; min-height:100%; object-fit: cover; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-right: 1px solid #0043a8; border-left: none;"> 
+              </div>
+            </div>
+            <div class="col-md-8 d-flex flex-column">
+              <div class="card-body">
+                <h5 class="card-title">Ingredients</h5>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <td>(Per 100g)</th>
+                      <th scope="col">Calories</th>
+                      <th scope="col">Protein</th>
+                      <th scope="col">Fat</th>
+                      <th scope="col">Carbs</th>
+                      <th scope="col">Sugars</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  <% if(meal.ingredients.length > 0) { for(var i=0; i<meal.ingredients.length; i++) { %>
+                    <tr>
+                      <th scope="col"><%= meal.ingredients[i] %></td>
+                      <td ><%= meal.ninf[i].value[0] %> cal</td>
+                      <td ><%= meal.ninf[i].value[1] %> g</td>
+                      <td ><%= meal.ninf[i].value[2] %> g</td>
+                      <td ><%= meal.ninf[i].value[3] %> g</td>
+                      <td ><%= meal.ninf[i].value[4] %> g</td>
+                    </tr>
+                  <% }} %>
+                  </tbody>
+                </table>
+
+                <br>
+                <h5 class="card-title">Net Nutrition</h5>
+
+                <table class="table">
+                  <!-- <thead>
+                    <tr>
+                      <td scope="col">(Net)</th>
+                      <th scope="col">Value</th>
+
+                    </tr>
+                  </thead> -->
+                  <tbody>
+                    <tr>
+                      <th scope="row">Calories</th>
+                      <td><%= meal.netinf[0] %> Cal</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Protein</th>
+                      <td><%= meal.netinf[1] %> g</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Fat</th>
+                      <td><%= meal.netinf[2] %> g</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Carbs</th>
+                      <td><%= meal.netinf[3] %> g</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <button type="submit" class="btn btn-primary btn-lg">Update</button>
+      </div>
+
+      </form>
+    
+
+</div>
+
+
+<div class="modal fade" tabindex="-1" id="deleteModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">You are about to delete a meal</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>
+            This will delete your meal <b class="fw-bold"><%= meal.name %></b><br/>
+            Are you sure?
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <form action="/dashboard/item-delete/<%= mealId %>?_method=DELETE" method="POST" class="position-relative">
+          <button type="submit" class="btn btn-danger">Delete Meal</button>
+        </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
