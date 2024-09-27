@@ -31,7 +31,7 @@ BentoBalance is a modern, AI-powered calorie calculator that helps users keep tr
 - **Express.js**: Web application framework
 - **MongoDB**: Database for storing user and meal data
 - **Passport.js (OAuth2)**: Secure user authentication
-- **Machine Learning API**: For analyzing meal images and generating nutritional facts
+- **Gemini API**: For analyzing meal images and generating nutritional facts
 
 ---
 
