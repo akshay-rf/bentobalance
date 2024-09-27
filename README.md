@@ -134,4 +134,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-Made with ❤️ by [Akshay RF](https://github.com/akshay-rf)
+Made by [Akshay RF](https://github.com/akshay-rf)
