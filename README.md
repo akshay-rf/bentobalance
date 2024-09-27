@@ -86,7 +86,7 @@ BentoBalance is a modern, AI-powered calorie calculator that helps users keep tr
     npm start
     ```
 
-5. Open your browser and navigate to `http://localhost:3000`
+5. Open your browser and navigate to `http://localhost:5000`
 
 ---
 
@@ -134,4 +134,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-Made with ❤️ by [Your Name](https://yourwebsite.com)
+Made with ❤️ by [Akshay RF](https://github.com/akshay-rf)
