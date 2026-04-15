@@ -20,7 +20,12 @@ app.use(express.json({ limit: '1mb' }));
 app.use(methodOverride("_method"))
 app.use(clerkMiddleware({
     publishableKey: getClerkPublishableKey(),
-    secretKey: process.env.CLERK_SECRET_KEY
+    secretKey: process.env.CLERK_SECRET_KEY,
+    authorizedParties: [
+        process.env.BASE_URL || 'http://localhost:3000',
+        'http://localhost:8000',
+        process.env.DOMAIN || 'localhost'
+    ]
 }));
 
 connectDB()

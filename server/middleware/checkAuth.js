@@ -45,7 +45,12 @@ exports.isLoggedIn = async function(req, res, next){
         req.user = user;
         return next();
     } catch (error) {
-        console.log(error);
+        console.error('Auth error:', {
+            message: error.message,
+            code: error.code,
+            timestamp: new Date().toISOString(),
+            url: req.originalUrl
+        });
         return rejectUnauthorized(req, res);
     }
 }
