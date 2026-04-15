@@ -24,7 +24,7 @@ const upload = multer({ storage: storage });
 router.get('/dashboard', isLoggedIn, mainController.dashboard);
 router.get('/dashboard/item/:id', isLoggedIn, mainController.dashboardViewMeal);
 router.put('/dashboard/item/:id', isLoggedIn, mainController.dashboardUpdateMeal);
-router.delete('/dashboard/item-delete/:id', isLoggedIn, mainController.dashboardDeleteMeal);
+router.post('/dashboard/item-delete/:id', isLoggedIn, mainController.dashboardDeleteMeal);
 router.post('/dashboard/add', isLoggedIn, mainController.dashboardAddMeal);
 router.post('/dashboard/upload', isLoggedIn, upload.single('image'), mainController.dashboardUploadMeal);
 router.get('/dashboard/search', isLoggedIn, mainController.dashboardSearch);

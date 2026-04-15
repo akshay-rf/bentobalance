@@ -1,17 +1,26 @@
 <div class="container-fluid">
-    <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4">
-      <div class="col-md-3 mb-2 mb-md-0">
-        <a href="/dashboard" class="d-inline-flex link-body-emphasis text-primary text-decoration-none fw-bold fs-2">
-        BentoBalance
-        </a>
-      </div>
+    <header class="py-3 mb-4">
+      <div class="row align-items-center gx-3">
+        <div class="col-auto">
+          <a href="/dashboard" class="d-inline-flex link-body-emphasis text-primary text-decoration-none fw-bold fs-2">
+            BentoBalance
+          </a>
+        </div>
 
-        <form class="nav col-12 col-md-auto flex-fill mb-2 justify-content-center mb-md-0" role="search" method="POST" action="/dashboard/search">
-            <input type="search" name="searchTerm" class="form-control border-primary" placeholder="Search..." aria-label="Search">
-        </form>
+        <div class="col d-flex justify-content-center">
+          <nav>
+            <a href="/dashboard" class="nav-link d-inline px-2">Meals</a>
+            <a href="/dashboard/fitness-coach" class="nav-link d-inline px-2">Form Coach</a>
+            <a href="/dashboard/commitments" class="nav-link d-inline px-2">No Quit</a>
+          </nav>
+        </div>
 
-      <div class="col-md-3 text-end">
-        <a href="/logout" type="button" class="btn btn-outline-primary me-2">Logout</a>
+        <div class="col-auto d-flex align-items-center gap-3">
+          <form class="d-flex mb-0" role="search" method="POST" action="/dashboard/search">
+            <input type="search" name="searchTerm" class="form-control border-primary" placeholder="Search..." aria-label="Search" style="min-width: 320px; max-width: 420px;">
+          </form>
+          <a href="/logout" class="btn btn-outline-primary ms-3">Logout</a>
+        </div>
       </div>
     </header>
   </div>

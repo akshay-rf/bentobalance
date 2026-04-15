@@ -4,28 +4,24 @@ const express = require('express');
 const expressLayouts = require('express-ejs-layouts');
 const methodOverride = require('method-override');
 const connectDB = require('./server/config/db');
-const session = require('express-session');
-const passport = require('passport');
-const MongoStore = require('connect-mongo');
+const { clerkMiddleware } = require('@clerk/express');
+const { getClerkPublishableKey } = require('./server/utils/clerkKey');
 
 const app = express();
-const port = 5000 || process.env.PORT;
 
-app.use(session({
-    secret:'jsqud',
-    resave:false,
-    saveUninitialized: true,
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI
-    })
-}))
-
-app.use(passport.initialize());
-app.use(passport.session());
+app.use((req, res, next) => {
+    res.locals.clerkPublishableKey = getClerkPublishableKey();
+    next();
+});
+const port = process.env.PORT || 5000;
 
 app.use(express.urlencoded({extended:true}));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(methodOverride("_method"))
+app.use(clerkMiddleware({
+    publishableKey: getClerkPublishableKey(),
+    secretKey: process.env.CLERK_SECRET_KEY
+}));
 
 connectDB()
 
@@ -38,6 +34,7 @@ app.set('view engine', 'ejs');
 app.use('/', require('./server/routes/auth'))
 app.use('/', require('./server/routes/index'))
 app.use('/', require('./server/routes/dashboard'))
+app.use('/', require('./server/routes/features'))
 app.use('/uploads', express.static('uploads'));
 
 

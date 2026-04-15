@@ -1,0 +1,18 @@
+<div class="container-fluid container-fluid-custom py-md-5 mb-5 text-center">
+    <h1 class="display-6 fw-bold mb-3">Signing you out...</h1>
+    <p>Please wait while we close your secure session.</p>
+</div>
+<script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="<%= process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY %>"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+></script>
+<script>
+    window.addEventListener('load', async () => {
+        await window.Clerk.load();
+        await window.Clerk.signOut();
+        window.location.href = '/';
+    });
+</script>

@@ -7,6 +7,48 @@
             <a type="button" class="btn btn-primary me2" data-bs-toggle="modal" id="addButton" data-bs-target="#addModal">+ Add Meal</a>
         </div>
     </div>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card p-4 overview-card shadow-sm">
+                <div class="row align-items-center gy-3">
+                    <div class="col-md-4">
+                        <div class="overview-panel p-4 h-100">
+                            <h5 class="mb-2">Quick Actions</h5>
+                            <p class="mb-0">Jump into your workout coach or habit tracker without leaving your dashboard.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="card feature-card h-100 p-3">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="feature-icon me-3">💪</div>
+                                        <div>
+                                            <h5 class="mb-1">AI Form Coach</h5>
+                                            <p class="small mb-0">Real-time exercise guidance while you train at home.</p>
+                                        </div>
+                                    </div>
+                                    <a href="/dashboard/fitness-coach" class="btn btn-outline-primary btn-sm">Open</a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="card feature-card h-100 p-3">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="feature-icon me-3">🧠</div>
+                                        <div>
+                                            <h5 class="mb-1">Habit Tracker</h5>
+                                            <p class="small mb-0">Commit to habits, track streaks, and stay consistent.</p>
+                                        </div>
+                                    </div>
+                                    <a href="/dashboard/commitments" class="btn btn-outline-primary btn-sm">Open</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row">
         <% if(meals.length > 0) { for(var i=0; i<meals.length; i++) { %>

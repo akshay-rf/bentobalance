@@ -1,78 +1,81 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const User = require('../models/User');
+const { createClerkClient } = require('@clerk/backend');
+const { getAuth } = require('@clerk/express');
+const { parsePublishableKey } = require('@clerk/shared/keys');
+const { syncClerkUser } = require('../services/userSync');
+const { getClerkPublishableKey } = require('../utils/clerkKey');
 
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL,
-  },
-async function(accessToken, refreshToken, profile, done) {
+const clerkClient = createClerkClient({
+    secretKey: process.env.CLERK_SECRET_KEY
+});
 
-    const newUser = {
-        googleId: profile.id,
-        displayName: profile.displayName,
-        firstName: profile.name.givenName,
-        lastName: profile.name.familyName,
-        profileImage: profile.photos[0].value
-    }
+router.get('/sign-in', async (req, res) => {
+    const publishableKey = getClerkPublishableKey();
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    let clerkSignInUrl = '/';
 
-    try{
+    try {
+        const domainsResponse = await clerkClient.domains.request({
+            method: 'GET',
+            path: '/domains'
+        });
+        const domains = domainsResponse?.data || [];
+        const primaryDomain = domains.find((domain) => !domain.isSatellite) || domains[0];
+        const accountsPortalUrl = primaryDomain?.accountsPortalUrl || primaryDomain?.accounts_portal_url;
 
-        let user = await User.findOne({googleId: profile.id});
-
-        if(user){
-            done(null, user);
-        }else{
-            user = await User.create(newUser);
-            done(null, user);
+        if (accountsPortalUrl) {
+            clerkSignInUrl = `${accountsPortalUrl}/sign-in?redirect_url=${encodeURIComponent(`${baseUrl}/auth/clerk/callback`)}`;
+        } else {
+            const parsedKey = parsePublishableKey(publishableKey);
+            const frontendApi = parsedKey?.frontendApi;
+            if (frontendApi) {
+                clerkSignInUrl = `https://${frontendApi}/sign-in?redirect_url=${encodeURIComponent(`${baseUrl}/auth/clerk/callback`)}`;
+            }
         }
-
-    }catch(err){
-        console.log(err);
+    } catch (error) {
+        console.log('Unable to build Clerk hosted sign in URL.', error.message);
     }
 
-    }
-));
+    const locals = {
+        title: 'Sign In - BentoBalance',
+        description: 'Sign in to BentoBalance',
+        authPage: true
+    };
 
-router.get('/auth/google', passport.authenticate('google', 
-    { scope: ['email','profile'] }));
-  
-router.get('/auth/google/callback', 
-passport.authenticate('google', { 
-    failureRedirect: '/login-failure',
-    successRedirect: '/dashboard'})
-); 
-
-router.get('/login-failure', (req,res)=>{
-    res.send('Something went wrong...')
-})
-
-router.get('/logout', (req, res)=>{
-    req.session.destroy(error=>{
-        if(error){
-            console.log(error);
-            res.send("error logging out");
-        }else{
-            res.redirect('/');
-        }
-    })
-})
-
-passport.serializeUser(function(user, done){
-    done(null, user.id);
-})
-
-passport.deserializeUser(function(id, done) {
-    User.findById(id)
-    .then(user => {
-        done(null, user);
-    })
-    .catch(err => {
-        done(err, null);
+    res.render('auth/sign-in', {
+        locals,
+        clerkPublishableKey: publishableKey,
+        clerkSignInUrl,
+        layout: '../views/layouts/main'
     });
+});
+
+router.get('/auth/clerk/callback', async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        if (!userId) {
+            return res.redirect('/sign-in');
+        }
+
+        const clerkUser = await clerkClient.users.getUser(userId);
+        await syncClerkUser(clerkUser);
+
+        return res.redirect('/dashboard');
+    } catch (error) {
+        console.log(error);
+        return res.redirect('/sign-in');
+    }
+});
+
+router.get('/logout', (req, res) => {
+    const locals = {
+        title: 'Signing Out - BentoBalance',
+        description: 'Ending your BentoBalance session',
+        authPage: true
+    };
+
+    res.render('auth/logout', { locals, layout: '../views/layouts/main' });
 });
 
 

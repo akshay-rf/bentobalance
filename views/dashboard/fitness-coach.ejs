@@ -1,0 +1,310 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1>AI Form Coach</h1>
+            <p class="mb-0">Live movement feedback for squats, pushups, and planks using your webcam.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card p-3 position-relative coach-card">
+                <video id="coach-video" class="w-100 rounded" autoplay muted playsinline></video>
+                <div id="coach-overlay" class="coach-overlay visible">Waiting for camera access...</div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card p-3 h-100">
+                <h4 class="mb-3">Real-Time Guidance</h4>
+                <p id="coach-status">Waiting for camera access. Click Start Coach to begin.</p>
+                <label for="movement" class="form-label">Focus Exercise</label>
+                <select id="movement" class="form-select mb-3">
+                    <option value="squat">Squat</option>
+                    <option value="pushup">Pushup</option>
+                    <option value="plank">Plank</option>
+                </select>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" id="start-coach">Start Coach</button>
+                    <button type="button" class="btn btn-outline-primary" id="stop-coach" disabled>Stop</button>
+                </div>
+                <p id="coach-voice-status" class="small text-muted mt-3">Voice guidance will speak corrections when active.</p>
+                <hr />
+                <small class="text-muted">Tip: keep your full body visible for better feedback quality.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const statusNode = document.getElementById('coach-status');
+    const movementNode = document.getElementById('movement');
+    const video = document.getElementById('coach-video');
+    const startButton = document.getElementById('start-coach');
+    const stopButton = document.getElementById('stop-coach');
+    const overlay = document.getElementById('coach-overlay');
+    const voiceStatus = document.getElementById('coach-voice-status');
+
+    let streamRef = null;
+    let coachIntervalTimer = null;
+    let coachActive = false;
+    let audioRef = null;
+    let audioUrlRef = null;
+    let analyzeInFlight = false;
+    let authFailureCount = 0;
+    const canvas = document.createElement('canvas');
+    const ANALYSIS_INTERVAL_MS = 600; // 600ms interval for frame analysis
+
+    const setOverlay = (text, visible = true) => {
+        overlay.textContent = text;
+        overlay.classList.toggle('visible', visible);
+    };
+    const captureFrame = () => {
+        if (!video.videoWidth || !video.videoHeight) return null;
+        const targetWidth = 320;
+        const scale = targetWidth / video.videoWidth;
+        const width = targetWidth;
+        const height = Math.round(video.videoHeight * scale);
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, width, height);
+        return canvas.toDataURL('image/jpeg', 0.6);
+    };
+
+    const base64ToBlobUrl = (base64, mimeType) => {
+        const binary = atob(base64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i += 1) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: mimeType || 'audio/wav' });
+        return URL.createObjectURL(blob);
+    };
+
+    const refreshClerkSessionToken = async () => {
+        if (!window.Clerk) return;
+        try {
+            if (!window.Clerk.loaded) {
+                await window.Clerk.load();
+            }
+            if (window.Clerk.session) {
+                await window.Clerk.session.getToken({ skipCache: true });
+            }
+        } catch (error) {
+            console.warn('Clerk token refresh failed:', error?.message || error);
+        }
+    };
+
+    const speakWithBrowserTts = (text) => {
+        if (!('speechSynthesis' in window)) return false;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        return true;
+    };
+
+    const analyzeFrame = async () => {
+        if (analyzeInFlight) {
+            return;
+        }
+
+        // Skip if audio is currently playing (wait for it to finish)
+        if (audioRef && !audioRef.paused && !audioRef.ended) {
+            return;
+        }
+
+        const frameData = captureFrame();
+        if (!frameData) return;
+
+        analyzeInFlight = true;
+
+        try {
+            await refreshClerkSessionToken();
+
+            let response = await fetch('/dashboard/fitness-coach/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    movement: movementNode.value,
+                    frame: frameData
+                })
+            });
+
+            // Retry once after forced token refresh before failing as expired
+            if (response.status === 401 || response.status === 403) {
+                await refreshClerkSessionToken();
+                response = await fetch('/dashboard/fitness-coach/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        movement: movementNode.value,
+                        frame: frameData
+                    })
+                });
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            const rawBody = await response.text();
+            const isJson = contentType.includes('application/json');
+
+            if (response.status === 401 || response.status === 403 || response.redirected) {
+                authFailureCount += 1;
+                if (authFailureCount >= 3) {
+                    statusNode.textContent = 'Session expired. Please sign in again.';
+                    setOverlay('Auth required');
+                    coachActive = false;
+                    return;
+                }
+                voiceStatus.textContent = 'Refreshing session...';
+                return;
+            }
+
+            authFailureCount = 0;
+
+            let result = {};
+            if (isJson) {
+                try {
+                    result = rawBody ? JSON.parse(rawBody) : {};
+                } catch (parseError) {
+                    result = { error: 'Invalid JSON' };
+                }
+            }
+
+            if (!response.ok) {
+                statusNode.textContent = result.error || 'Coach error.';
+                analyzeInFlight = false;
+                return;
+            }
+
+            // If response was filtered (duplicate feedback), skip audio
+            if (result.filtered) {
+                voiceStatus.textContent = 'Analyzing next frame...';
+                analyzeInFlight = false;
+                return;
+            }
+
+            if (result.correction) {
+                statusNode.textContent = result.correction;
+            }
+
+            // Only play audio if we have audio data
+            if (result.audio && result.mimeType) {
+                if (audioRef) {
+                    audioRef.pause();
+                    audioRef = null;
+                }
+                if (audioUrlRef) {
+                    URL.revokeObjectURL(audioUrlRef);
+                    audioUrlRef = null;
+                }
+
+                const mimeType = result.mimeType || 'audio/wav';
+                console.log('Creating audio blob:', { mimeType, audioLength: result.audio.length });
+                
+                audioUrlRef = base64ToBlobUrl(result.audio, mimeType);
+                audioRef = new Audio(audioUrlRef);
+                
+                // Add error handling for audio playback
+                audioRef.onerror = (error) => {
+                    console.error('Audio playback error:', error);
+                    voiceStatus.textContent = 'Audio playback error: ' + (error?.message || 'Unknown error');
+                };
+                
+                audioRef.onloadedmetadata = () => {
+                    console.log('Audio loaded, duration:', audioRef.duration);
+                };
+                
+                try {
+                    await audioRef.play();
+                    voiceStatus.textContent = 'Playing feedback...';
+                } catch (playError) {
+                    console.error('Audio play() failed:', playError);
+                    voiceStatus.textContent = 'Failed to play audio: ' + playError.message;
+                }
+            } else {
+                if (result.correction && (result.ttsStatus === 'quota' || result.ttsStatus === 'error')) {
+                    const spoke = speakWithBrowserTts(result.correction);
+                    voiceStatus.textContent = spoke
+                        ? 'Using browser voice (Gemini TTS quota reached).'
+                        : 'Gemini TTS unavailable right now.';
+                } else {
+                    voiceStatus.textContent = 'No audio (text-only feedback).';
+                }
+            }
+        } catch (error) {
+            console.warn('Coach request failed:', error);
+            statusNode.textContent = `Request failed: ${error.message}`;
+        } finally {
+            analyzeInFlight = false;
+        }
+    };
+
+    startButton.addEventListener('click', async () => {
+        try {
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            setOverlay('Waiting for camera access...', true);
+            statusNode.textContent = 'Requesting camera permission...';
+
+            streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+
+            video.srcObject = streamRef;
+            await video.play();
+            setOverlay('', false);
+            statusNode.textContent = 'Camera active. Follow the coach cues in the frame.';
+            voiceStatus.textContent = 'Voice guidance will speak corrections when active.';
+            
+            coachActive = true;
+            if (coachIntervalTimer) {
+                clearInterval(coachIntervalTimer);
+                coachIntervalTimer = null;
+            }
+            
+            // Start interval-based frame analysis (600ms)
+            coachIntervalTimer = setInterval(analyzeFrame, ANALYSIS_INTERVAL_MS);
+        } catch (error) {
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            setOverlay('Camera access denied. Allow permissions and try again.', true);
+            statusNode.textContent = 'Camera access denied. Allow permissions and try again.';
+        }
+    });
+
+    stopButton.addEventListener('click', () => {
+        coachActive = false;
+        analyzeInFlight = false;
+        if (coachIntervalTimer) {
+            clearInterval(coachIntervalTimer);
+            coachIntervalTimer = null;
+        }
+        if (streamRef) {
+            streamRef.getTracks().forEach((track) => track.stop());
+            streamRef = null;
+        }
+        video.srcObject = null;
+        setOverlay('Waiting for camera access...', true);
+        statusNode.textContent = 'Session stopped.';
+        voiceStatus.textContent = 'Voice guidance paused.';
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        if (audioRef) {
+            audioRef.pause();
+            audioRef = null;
+        }
+        if (audioUrlRef) {
+            URL.revokeObjectURL(audioUrlRef);
+            audioUrlRef = null;
+        }
+    });
+</script>

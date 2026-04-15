@@ -14,6 +14,13 @@
         </div>
     </div>
 
+    <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+      <div class="alert alert-danger" role="alert">
+        <%= errorMessage %>
+      </div>
+    <% } %>
+
+    <% if (genOut) { %>
     <form action="/dashboard/add" method="POST">
       <!-- Input field -->
       
@@ -100,6 +107,9 @@
         </div>
 
       </form>
+    <% } else { %>
+      <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+    <% } %>
     
 
 </div>

@@ -152,3 +152,78 @@ h1,h2,h3,h4,h5,h6{
     right: -50px;
     bottom: -30px;
 }
+
+.feature-card {
+    border: 1px solid rgba(0, 67, 168, 0.14);
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 1.25rem;
+    min-height: 160px;
+}
+
+.feature-icon {
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: #0043a8;
+    color: #ffffff;
+    font-size: 1.2rem;
+}
+
+.overview-card {
+    border: none;
+    border-radius: 1.5rem;
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.overview-panel {
+    background: rgba(0, 67, 168, 0.08);
+    border-radius: 1.25rem;
+    height: 100%;
+}
+
+.feature-card h5 {
+    margin-bottom: 0.35rem;
+}
+
+.feature-card p {
+    color: #233154;
+}
+
+.btn-outline-primary.btn-sm {
+    padding: 0.55rem 1rem;
+}
+
+.auth-page .container-fluid {
+    width: 100%;
+}
+
+.coach-card {
+    min-height: 420px;
+}
+
+.coach-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--bs-primary-rgb);
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 0.75rem;
+    text-align: center;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.coach-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+

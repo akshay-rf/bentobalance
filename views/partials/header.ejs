@@ -11,9 +11,13 @@
         <li><a href="/about" class="nav-link px-2">About</a></li>
       </ul>
 
-      <div class="col-md-3 text-end">
-        <a href="/auth/google" type="button" class="btn btn-outline-primary me-2">Sign Up</a>
-        <a href="/auth/google" type="button" class="btn btn-primary">Sign In</a>
-      </div>
+      <% if (!locals || !locals.authPage) { %>
+        <div class="col-md-3 text-end">
+          <a href="/sign-in" type="button" class="btn btn-outline-primary me-2">Sign Up</a>
+          <a href="/sign-in" type="button" class="btn btn-primary">Sign In</a>
+        </div>
+      <% } else { %>
+        <div class="col-md-3"></div>
+      <% } %>
     </header>
   </div>

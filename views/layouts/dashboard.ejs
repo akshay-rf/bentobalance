@@ -20,5 +20,33 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js/dist/clerk.browser.js"></script>
+    <script>
+        window.addEventListener('load', async () => {
+            if (window.Clerk && '<%= clerkPublishableKey %>') {
+                await window.Clerk.load({ publishableKey: '<%= clerkPublishableKey %>' });
+
+                const refreshSession = async () => {
+                    try {
+                        if (window.Clerk.session) {
+                            await window.Clerk.session.getToken({ skipCache: true });
+                        }
+                    } catch (error) {
+                        console.warn('Clerk periodic token refresh failed:', error?.message || error);
+                    }
+                };
+
+                // Keep session valid for long-running pages (fitness coach frame loop)
+                refreshSession();
+                setInterval(refreshSession, 45000);
+
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        refreshSession();
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

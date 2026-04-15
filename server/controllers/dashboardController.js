@@ -5,7 +5,64 @@ const mongoose = require('mongoose');
 const path = require('path')
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs=require("fs");
-const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.API_KEY);
+const GEMINI_MODELS = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+    "gemini-2.0-flash"
+].filter(Boolean);
+
+const parseGeminiJson = (rawText) => {
+    const trimmed = rawText.trim();
+    try {
+        return JSON.parse(trimmed);
+    } catch (directError) {
+        const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+        if (fenced && fenced[1]) {
+            return JSON.parse(fenced[1].trim());
+        }
+
+        const jsonObject = trimmed.match(/\{[\s\S]*\}/);
+        if (jsonObject && jsonObject[0]) {
+            return JSON.parse(jsonObject[0]);
+        }
+
+        throw directError;
+    }
+};
+
+const normalizeGeminiMealOutput = (payload) => {
+    if (!payload || typeof payload !== 'object') {
+        throw new Error('Gemini response is not an object.');
+    }
+
+    const normalized = {
+        name: String(payload.name || 'Untitled Meal'),
+        ingredients: Array.isArray(payload.ingredients) ? payload.ingredients.map((item) => String(item)) : [],
+        ninf: Array.isArray(payload.ninf) ? payload.ninf : [],
+        netinf: Array.isArray(payload.netinf) ? payload.netinf : []
+    };
+
+    if (!normalized.ingredients.length) {
+        throw new Error('No ingredients detected from image.');
+    }
+
+    normalized.ninf = normalized.ninf.map((row) =>
+        Array.isArray(row) ? row.map((value) => Number(value) || 0).slice(0, 5) : [0, 0, 0, 0, 0]
+    );
+
+    while (normalized.ninf.length < normalized.ingredients.length) {
+        normalized.ninf.push([0, 0, 0, 0, 0]);
+    }
+
+    normalized.netinf = normalized.netinf.map((value) => Number(value) || 0).slice(0, 4);
+    while (normalized.netinf.length < 4) {
+        normalized.netinf.push(0);
+    }
+
+    return normalized;
+};
 
 
 exports.dashboard = async (req, res) => {
@@ -185,11 +242,19 @@ exports.dashboardAddMeal = async (req, res) => {
 
 
 exports.dashboardUploadMeal = async(req, res) => {
-    filepath = req.file.path;
+    if (!req.file) {
+        return res.status(400).render('dashboard/add', {
+            layout: '../views/layouts/dashboard',
+            genOut: null,
+            filepath: '',
+            errorMessage: 'No image was uploaded. Please choose an image and try again.'
+        });
+    }
+
+    const filepath = req.file.path;
     console.log(filepath);
-    absolutePath = path.resolve(filepath);
+    const absolutePath = path.resolve(filepath);
     if(absolutePath){
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
         const prompt = "Analyze the given meal image and return the meal details without any assumptions or remarks about the difficulty of the estimation, I will manually add a disclaimer that this is only a rough estimation only. give output in the this exact JSON format: { name: 'Meal Name', ingredients: ['Ingredient1', 'Ingredient2' and so on...], ninf: [[Calories, Protein, Fat, Carbs, Sugars and for Ingretient1], [Calories, Protein, Fat, Carbs, Sugars for Ingredient2] and so on for all ingredients per 100 grams], netinf: [Total Calories, Total Protein, Total Fat, Total Carbohydrates] }. Use only double quotes and integers, do not add any disclaimers just stick precisely to the format";
     
@@ -198,17 +263,39 @@ exports.dashboardUploadMeal = async(req, res) => {
         const image = {
             inlineData: {
             data: Buffer.from(fs.readFileSync(absolutePath)).toString("base64"),
-            mimeType: "image/*",
+            mimeType: req.file.mimetype || "image/jpeg",
             },
         };
-        
-        const result = await model.generateContent([prompt, image]);
-        console.log(result.response.text());
 
-        res.render(`dashboard/add`, {
+        let lastError = null;
+        for (const modelName of GEMINI_MODELS) {
+            try {
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    generationConfig: {
+                        responseMimeType: "application/json"
+                    }
+                });
+                const result = await model.generateContent([prompt, image]);
+                const textResponse = result.response.text();
+                const parsedResponse = normalizeGeminiMealOutput(parseGeminiJson(textResponse));
+
+                return res.render('dashboard/add', {
+                    layout: '../views/layouts/dashboard',
+                    genOut: parsedResponse,
+                    filepath
+                });
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        console.log("Gemini processing failed:", lastError);
+        return res.status(502).render('dashboard/add', {
             layout: '../views/layouts/dashboard',
-            genOut: JSON.parse(result.response.text()),
-            filepath: filepath
+            genOut: null,
+            filepath,
+            errorMessage: `AI analysis is temporarily unavailable. ${lastError?.message || 'Please try another image in a moment.'}`
         });
     }
 

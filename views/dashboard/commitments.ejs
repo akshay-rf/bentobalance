@@ -1,0 +1,84 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Habit Tracker</h1>
+            <p class="mb-0">Build lasting habits with daily tracking, AI insights, and smart reminders.</p>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-4">
+        <h4 class="mb-3">Add Daily Commitment</h4>
+        <form method="POST" action="/dashboard/commitments" class="row g-3">
+            <div class="col-md-5">
+                <input type="text" class="form-control" name="title" placeholder="Example: 30 min evening walk" required />
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control" name="dailyTarget" placeholder="Target: 1x per day" />
+            </div>
+            <div class="col-md-2">
+                <input type="time" class="form-control" name="reminderTime" value="20:00" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">Add</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card p-3 mb-4">
+        <h5>Habit Overview</h5>
+        <p>Total Habits: <%= totalCommitments %></p>
+        <% if (totalCommitments > 0) { %>
+        <div class="mb-2">
+            <strong>Active Habits</strong>
+            <div class="progress">
+                <div class="progress-bar bg-success" style="width: <%= (activeCommitments / totalCommitments) * 100 %>%"><%= activeCommitments %></div>
+            </div>
+        </div>
+        <div class="mb-2">
+            <strong>Paused Habits</strong>
+            <div class="progress">
+                <div class="progress-bar bg-warning" style="width: <%= (pausedCommitments / totalCommitments) * 100 %>%"><%= pausedCommitments %></div>
+            </div>
+        </div>
+        <% } %>
+    </div>
+
+    <div class="row">
+        <% if (commitments.length) { %>
+            <% commitments.forEach((item) => { %>
+                <div class="col-lg-4 mb-3">
+                    <div class="card p-3 h-100">
+                        <h5><%= item.title %></h5>
+                        <p class="mb-1"><strong>Target:</strong> <%= item.dailyTarget %></p>
+                        <p class="mb-1"><strong>Reminder:</strong> <%= item.reminderTime %></p>
+                        <p class="mb-1"><strong>Streak:</strong> <%= item.streak %> day(s) <%= '🔥'.repeat(Math.min(item.streak, 5)) %></p>
+                        <p class="mb-1"><strong>Missed:</strong> <%= item.missedCount %></p>
+                        <p class="mb-1"><strong>Status:</strong> <%= item.status %></p>
+                        <p class="text-muted"><%= item.escalationMessage %></p>
+                        <div class="d-flex gap-2 mt-auto">
+                            <form method="POST" action="/dashboard/commitments/<%= item._id %>/check-in" class="flex-fill">
+                                <button class="btn btn-primary btn-sm w-100" <%= item.status !== 'active' ? 'disabled' : '' %>>Check In</button>
+                            </form>
+                            <form method="POST" action="/dashboard/commitments/<%= item._id %>/miss" class="flex-fill">
+                                <button class="btn btn-outline-primary btn-sm w-100" <%= item.status !== 'active' ? 'disabled' : '' %>>Mark Missed</button>
+                            </form>
+                            <form method="POST" action="/dashboard/commitments/<%= item._id %>/<%= item.status === 'active' ? 'pause' : 'resume' %>" class="flex-fill">
+                                <button class="btn btn-secondary btn-sm w-100"><%= item.status === 'active' ? 'Pause' : 'Resume' %></button>
+                            </form>
+                            <form method="POST" action="/dashboard/commitments/<%= item._id %>/delete" class="flex-fill">
+                                <button class="btn btn-danger btn-sm w-100">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <div class="col">
+                <div class="card p-4">
+                    <h4>No commitments yet</h4>
+                    <p class="mb-0">Create your first one above and keep your promise streak alive.</p>
+                </div>
+            </div>
+        <% } %>
+    </div>
+</div>
