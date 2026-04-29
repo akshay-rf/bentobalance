@@ -15,6 +15,7 @@ app.use((req, res, next) => {
 });
 const port = process.env.PORT || 5000;
 const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
+const clerkClockSkewInMs = Number(process.env.CLERK_CLOCK_SKEW_MS || 60000);
 
 app.use(express.urlencoded({extended:true}));
 app.use(express.json({ limit: '1mb' }));
@@ -22,6 +23,8 @@ app.use(methodOverride("_method"))
 app.use(clerkMiddleware({
     publishableKey: getClerkPublishableKey(),
     secretKey: process.env.CLERK_SECRET_KEY,
+    // Allow small machine time drift to avoid false nbf failures on local/dev devices.
+    clockSkewInMs: Number.isFinite(clerkClockSkewInMs) ? clerkClockSkewInMs : 60000,
     authorizedParties: [
         baseUrl,
         'http://localhost:3000',
