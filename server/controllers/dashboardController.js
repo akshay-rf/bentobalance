@@ -1,18 +1,30 @@
+/**
+ * Dashboard controller for BentoBalance
+ * Handles meal management, AI analysis, and user dashboard functionality
+ */
+
 require('dotenv').config();
 
 const Meal = require('../models/Meals');
+const Goal = require('../models/Goal');
+const BodyMetric = require('../models/BodyMetric');
+const Badge = require('../models/Badge');
+const Commitment = require('../models/Commitment');
 const mongoose = require('mongoose');
 const path = require('path')
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs=require("fs");
+const { checkAndAwardBadges } = require('./achievementsController');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.API_KEY);
 const GEMINI_MODELS = [
-    process.env.GEMINI_MODEL,
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-2.0-flash"
+    process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 ].filter(Boolean);
 
+/**
+ * Parses and normalizes JSON response from Gemini AI
+ * @param {string} rawText - Raw text response from Gemini
+ * @returns {Object} Parsed JSON object
+ */
 const parseGeminiJson = (rawText) => {
     const trimmed = rawText.trim();
     try {
@@ -32,6 +44,11 @@ const parseGeminiJson = (rawText) => {
     }
 };
 
+/**
+ * Normalizes meal data structure from Gemini response
+ * @param {Object} payload - Raw meal data from AI
+ * @returns {Object} Normalized meal object
+ */
 const normalizeGeminiMealOutput = (payload) => {
     if (!payload || typeof payload !== 'object') {
         throw new Error('Gemini response is not an object.');
@@ -65,101 +82,111 @@ const normalizeGeminiMealOutput = (payload) => {
 };
 
 
+const getNutritionTotals = async (userId) => {
+    const totals = await Meal.aggregate([
+        {
+            $match: {
+                user: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalCalories: { $sum: { $arrayElemAt: ["$netinf", 0] } },
+                totalProtein: { $sum: { $arrayElemAt: ["$netinf", 1] } },
+                totalFat: { $sum: { $arrayElemAt: ["$netinf", 2] } },
+                totalCarbs: { $sum: { $arrayElemAt: ["$netinf", 3] } }
+            }
+        }
+    ]);
+
+    return totals[0] || { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 };
+};
+
 exports.dashboard = async (req, res) => {
+    const locals = {
+        title: "Dashboard Home",
+        description: "Free AI Health App."
+    };
 
+    try {
+        await checkAndAwardBadges(req.user.id);
+        const now = new Date();
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(now.getDate() - 7);
 
-    // try{
+        const [totalStats, activeGoals, completedGoals, badges, commitments, latestMetric, totalMeals, mealsThisWeek, metricsLogged, activeCommitments] = await Promise.all([
+            getNutritionTotals(req.user.id),
+            Goal.countDocuments({ user: req.user.id, status: 'active' }),
+            Goal.countDocuments({ user: req.user.id, status: 'completed' }),
+            Badge.countDocuments({ user: req.user.id }),
+            Commitment.find({ user: req.user.id }).sort({ streak: -1 }).limit(1),
+            BodyMetric.findOne({ user: req.user.id }).sort({ date: -1 }),
+            Meal.countDocuments({ user: req.user.id }),
+            Meal.countDocuments({ user: req.user.id, createdAt: { $gte: sevenDaysAgo } }),
+            BodyMetric.countDocuments({ user: req.user.id }),
+            Commitment.countDocuments({ user: req.user.id, status: 'active' })
+        ]);
 
-    //     await Meal.insertMany([
-    //         {
-    //             user: "66f516a9cb475ccf0bfe0ebf",  // Randomly generated ObjectId
-    //             name: "Pasta",
-    //             image: "uploads/pasta.jpg",
-    //             ingredients: ["Wheat", "Tomato Sauce", "Cheese"],
-    //             ninf: [
-    //                 { value: [350, 12, 2, 74, 4, 1, 5] },  // Wheat (per 100g)
-    //                 { value: [80, 2, 3, 18, 2, 5, 200] },  // Tomato Sauce (per 100g)
-    //                 { value: [402, 25, 33, 1.3, 0, 0.4, 621] }  // Cheese (per 100g)
-    //             ],
-    //             netinf: [832, 39, 38, 93.3, 6, 6.4, 826],  // Total nutritional info for the dish
-    //             createdAt: new Date()
-    //         },
-    //         {
-    //             user: "66f516a9cb475ccf0bfe0ebf",
-    //             name: "Salad",
-    //             image: "uploads/salad.jpg",
-    //             ingredients: ["Lettuce", "Tomato", "Cucumber"],
-    //             ninf: [
-    //                 { value: [15, 1, 0.2, 3.3, 1.5, 0.6, 10] },  // Lettuce (per 100g)
-    //                 { value: [18, 0.9, 0.2, 3.9, 1.2, 2.6, 5] },  // Tomato (per 100g)
-    //                 { value: [16, 0.7, 0.1, 3.6, 0.5, 1.7, 2] }   // Cucumber (per 100g)
-    //             ],
-    //             netinf: [49, 2.6, 0.5, 10.8, 3.2, 4.9, 17],  // Total nutritional info for the salad
-    //             createdAt: new Date()
-    //         },
-    //         {
-    //             user: "66f516a9cb475ccf0bfe0ebf",
-    //             name: "Chicken Sandwich",
-    //             image: "uploads/chicken-sandwich.jpg",
-    //             ingredients: ["Chicken", "Bread", "Lettuce"],
-    //             ninf: [
-    //                 { value: [239, 27, 14, 0, 0, 0, 82] },  // Chicken (per 100g)
-    //                 { value: [265, 9, 3.2, 49, 2.4, 5.5, 491] },  // Bread (per 100g)
-    //                 { value: [15, 1, 0.2, 3.3, 1.5, 0.6, 10] }    // Lettuce (per 100g)
-    //             ],
-    //             netinf: [519, 37, 17.4, 52.3, 3.9, 6.1, 583],  // Total nutritional info for the sandwich
-    //             createdAt: new Date()
-    //         }
-    //     ])
+        const avgCaloriesPerMeal = totalMeals > 0 ? Math.round(totalStats.totalCalories / totalMeals) : 0;
 
-    // }catch(error){
-    //     console.log(error);
-    // }
+        res.render('dashboard/index', {
+            userName: req.user.firstName,
+            locals,
+            layout: '../views/layouts/dashboard',
+            totalCalories: Math.round(totalStats.totalCalories),
+            totalProtein: Math.round(totalStats.totalProtein),
+            totalFat: Math.round(totalStats.totalFat),
+            totalCarbs: Math.round(totalStats.totalCarbs),
+            activeGoals,
+            completedGoals,
+            badgesUnlocked: badges,
+            longestStreak: commitments[0]?.streak || 0,
+            latestWeight: latestMetric?.weight || null,
+            totalMeals,
+            mealsThisWeek,
+            avgCaloriesPerMeal,
+            activeCommitments,
+            metricsLogged
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Server Error');
+    }
+};
 
-    let perPage = 12;
-    let page = req.query.page || 1;
+exports.dashboardMeals = async (req, res) => {
+    const perPage = 12;
+    const page = Number(req.query.page) || 1;
 
     const locals = {
-        title: "Dashboard",
-        description: "Free AI Health App."
-    }
+        title: "Meals",
+        description: "Track and manage your meals."
+    };
 
-    try{
-        Meal.aggregate([
-            {
-                $sort: {
-                    createdAt: -1
-                }
-            },
-            {
-                $match: {
-                    user: new mongoose.Types.ObjectId(req.user.id)
-                }
-            }
+    try {
+        const meals = await Meal.aggregate([
+            { $sort: { createdAt: -1 } },
+            { $match: { user: new mongoose.Types.ObjectId(req.user.id) } }
         ])
-        .skip(perPage * page - perPage)
-        .limit(perPage)
-        .then((meals)=>{
-            Meal.countDocuments().then((count)=>{
-                res.render('dashboard/index', {
-                    userName: req.user.firstName,
-                    locals,
-                    meals,
-                    layout: '../views/layouts/dashboard',
-                    current: page,
-                    pages: Math.ceil(count / perPage)
-                }) 
-            }).catch((err)=>{
-                console.log(err);
-            })
-        }).catch((err)=>{
-            console.log(err)
-        })
+            .skip(perPage * page - perPage)
+            .limit(perPage);
 
-    }catch(error){
+        const count = await Meal.countDocuments({ user: new mongoose.Types.ObjectId(req.user.id) });
+
+        res.render('dashboard/meals', {
+            userName: req.user.firstName,
+            locals,
+            meals,
+            layout: '../views/layouts/dashboard',
+            current: page,
+            pages: Math.ceil(count / perPage)
+        });
+    } catch (error) {
         console.log(error);
+        res.status(500).send('Server Error');
     }
-}
+};
 
 
 exports.dashboardViewMeal = async (req, res) => {
@@ -195,7 +222,7 @@ try {
     
     await Meal.findOneAndUpdate({_id: req.params.id, user: req.user.id}, {name: req.body.title});
 
-    res.redirect('/dashboard')
+    res.redirect('/dashboard/meals')
 
 } catch (error) {
     console.log(error);
@@ -208,7 +235,7 @@ exports.dashboardDeleteMeal = async(req, res) => {
     try {
 
         await Meal.deleteOne({_id: req.params.id, user:req.user.id})
-        res.redirect('/dashboard');
+        res.redirect('/dashboard/meals');
 
     } catch(error){
         console.log(error)
@@ -233,7 +260,7 @@ exports.dashboardAddMeal = async (req, res) => {
         }));
         console.log(data);
         await Meal.create(data);
-        res.redirect('/dashboard');
+        res.redirect('/dashboard/meals');
     } catch (error) {
         console.error("Error adding meal:", error.message);
         res.status(500).send("Internal Server Error"); // Optionally send a response to the client

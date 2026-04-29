@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,700;1,100&family=Unbounded:wght@200..900&display=swap" rel="stylesheet">
 
 </head>
-<body class="<%= (locals && locals.authPage) ? 'auth-page d-flex flex-column min-vh-100' : '' %>">
+<body class="page-shell <%= (locals && locals.authPage) ? 'auth-page' : '' %> d-flex flex-column min-vh-100">
 
     <%- include('../partials/header.ejs') %>
     <%- body %>

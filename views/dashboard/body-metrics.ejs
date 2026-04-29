@@ -1,0 +1,110 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Body Metrics</h1>
+            <p class="mb-0">Track weight and composition changes over time.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card p-4 h-100">
+                <h4 class="mb-3">Log New Entry</h4>
+                <form action="/dashboard/body-metrics" method="POST" class="row g-2">
+                    <div class="col-12">
+                        <input type="number" step="0.1" name="weight" class="form-control" placeholder="Weight (kg)" required>
+                    </div>
+                    <div class="col-6">
+                        <input type="number" step="0.1" name="bodyFatPercentage" class="form-control" placeholder="Body fat %">
+                    </div>
+                    <div class="col-6">
+                        <input type="number" step="0.1" name="muscleMass" class="form-control" placeholder="Muscle mass">
+                    </div>
+                    <div class="col-12">
+                        <textarea name="notes" rows="2" class="form-control" placeholder="Notes"></textarea>
+                    </div>
+                    <div class="col-12 d-grid mt-2">
+                        <button class="btn btn-primary">Save Entry</button>
+                    </div>
+                </form>
+
+                <% if (latest) { %>
+                    <hr>
+                    <h5>Latest Snapshot</h5>
+                    <p class="mb-1">Weight: <strong><%= latest.weight %> kg</strong></p>
+                    <p class="mb-1">BMI: <strong><%= latest.bmi || 'N/A' %></strong></p>
+                    <p class="mb-0">Date: <%= new Date(latest.date).toLocaleDateString() %></p>
+                <% } %>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card p-4 mb-4">
+                <h4 class="mb-3">Weight Trend</h4>
+                <canvas id="weightTrendChart" height="110"></canvas>
+            </div>
+            <div class="card p-4">
+                <h4 class="mb-3">Recent Entries</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Weight</th>
+                                <th>Body Fat %</th>
+                                <th>Muscle</th>
+                                <th>BMI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (metrics.length === 0) { %>
+                                <tr>
+                                    <td colspan="5">No metric entries yet.</td>
+                                </tr>
+                            <% } %>
+                            <% metrics.forEach((metric) => { %>
+                                <tr>
+                                    <td><%= new Date(metric.date).toLocaleDateString() %></td>
+                                    <td><%= metric.weight %> kg</td>
+                                    <td><%= metric.bodyFatPercentage ?? '-' %></td>
+                                    <td><%= metric.muscleMass ?? '-' %></td>
+                                    <td><%= metric.bmi ?? '-' %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('weightTrendChart');
+    if (!ctx) return;
+
+    const labels = <%- JSON.stringify((trendData || []).map(item => new Date(item.date).toLocaleDateString())) %>;
+    const weights = <%- JSON.stringify((trendData || []).map(item => item.weight || 0)) %>;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Weight (kg)',
+                data: weights,
+                borderColor: 'rgba(18, 41, 108, 1)',
+                backgroundColor: 'rgba(18, 41, 108, 0.15)',
+                tension: 0.25,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true }
+            }
+        }
+    });
+});
+</script>

@@ -1,26 +1,30 @@
-<div class="container-fluid">
-    <header class="py-3 mb-4">
-      <div class="row align-items-center gx-3">
+<header class="page-header py-3 mb-4">
+    <div class="container-fluid">
+      <div class="row align-items-center gx-3 dashboard-header-row">
         <div class="col-auto">
-          <a href="/dashboard" class="d-inline-flex link-body-emphasis text-primary text-decoration-none fw-bold fs-2">
+          <a href="/dashboard" class="d-inline-flex link-body-emphasis text-primary text-decoration-none fw-bold fs-3">
             BentoBalance
           </a>
         </div>
 
-        <div class="col d-flex justify-content-center">
-          <nav>
-            <a href="/dashboard" class="nav-link d-inline px-2">Meals</a>
-            <a href="/dashboard/fitness-coach" class="nav-link d-inline px-2">Form Coach</a>
-            <a href="/dashboard/commitments" class="nav-link d-inline px-2">No Quit</a>
+        <div class="col d-flex justify-content-center dashboard-nav-wrap">
+          <nav class="dashboard-nav">
+            <a href="/dashboard" class="nav-link px-2">Home</a>
+            <a href="/dashboard/meals" class="nav-link px-2">Meals</a>
+            <a href="/dashboard/fitness-coach" class="nav-link px-2">Form Coach</a>
+            <a href="/dashboard/commitments" class="nav-link px-2">No Quit</a>
+            <a href="/dashboard/goals" class="nav-link px-2">Goals</a>
+            <a href="/dashboard/body-metrics" class="nav-link px-2">Metrics</a>
+            <a href="/dashboard/achievements" class="nav-link px-2">Badges</a>
           </nav>
         </div>
 
-        <div class="col-auto d-flex align-items-center gap-3">
+        <div class="col-auto d-flex align-items-center gap-2 dashboard-header-actions">
           <form class="d-flex mb-0" role="search" method="POST" action="/dashboard/search">
-            <input type="search" name="searchTerm" class="form-control border-primary" placeholder="Search..." aria-label="Search" style="min-width: 320px; max-width: 420px;">
+            <input type="search" name="searchTerm" class="form-control border-primary dashboard-search" placeholder="Search meals..." aria-label="Search">
           </form>
-          <a href="/logout" class="btn btn-outline-primary ms-3">Logout</a>
+          <a href="/logout" class="btn btn-outline-primary ms-2">Logout</a>
         </div>
       </div>
-    </header>
-  </div>
+    </div>
+</header>

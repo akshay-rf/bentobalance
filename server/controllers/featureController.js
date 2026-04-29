@@ -4,9 +4,22 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 const supportedModel = process.env.GEMINI_MODEL || process.env.GENAI_MODEL || 'gemini-2.5-flash';
 const ttsModel = process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts';
-const fallbackTtsModel = process.env.GEMINI_TTS_FALLBACK_MODEL || 'gemini-2.5-pro-preview-tts';
 const ttsVoice = process.env.GEMINI_TTS_VOICE || 'Kore';
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+const textModelCandidates = [
+    supportedModel,
+    'gemini-2.5-flash',
+    'gemini-2.0-flash'
+].filter(Boolean);
+const ttsModelCandidates = [
+    ttsModel,
+    'gemini-2.5-flash-preview-tts'
+].filter(Boolean);
+
+const isModelNotFoundError = (error) => {
+    const message = String(error?.message || '').toLowerCase();
+    return error?.status === 404 || message.includes('not found') || message.includes('models/');
+};
 
 const toWavBuffer = (pcmBuffer, sampleRate = 24000, channels = 1, bitsPerSample = 16) => {
     const byteRate = sampleRate * channels * (bitsPerSample / 8);
@@ -70,9 +83,10 @@ const extractTtsAudio = (payload) => {
 
 const requestGeminiTts = async (modelName, textPrompt) => {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const ttsInstruction = `Convert this text to speech audio only. Return audio output only. Text: ${textPrompt}`;
     const payloads = [
         {
-            contents: [{ parts: [{ text: textPrompt }] }],
+            contents: [{ role: 'user', parts: [{ text: ttsInstruction }] }],
             generationConfig: {
                 responseModalities: ['AUDIO'],
                 maxOutputTokens: 8192,
@@ -86,7 +100,7 @@ const requestGeminiTts = async (modelName, textPrompt) => {
             }
         },
         {
-            contents: [{ parts: [{ text: textPrompt }] }],
+            contents: [{ role: 'user', parts: [{ text: ttsInstruction }] }],
             generation_config: {
                 response_modalities: ['AUDIO'],
                 max_output_tokens: 8192,
@@ -144,6 +158,41 @@ const requestGeminiTts = async (modelName, textPrompt) => {
     };
 };
 
+const isTextOnlyModelError = (responseBody) => {
+    const body = String(responseBody || '').toLowerCase();
+    return body.includes('only supports text output');
+};
+
+const isTtsInstructionError = (responseBody) => {
+    const body = String(responseBody || '').toLowerCase();
+    return body.includes('should only be used for tts') || body.includes('generate audio');
+};
+
+const generateTextWithFallback = async (prompt, maxOutputTokens = 120) => {
+    if (!genAI) return '';
+
+    let lastError = null;
+    for (const modelName of textModelCandidates) {
+        try {
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                generationConfig: { maxOutputTokens }
+            });
+            const result = await model.generateContent(prompt);
+            const text = result?.response?.text?.().trim() || '';
+            if (text) return text;
+        } catch (error) {
+            lastError = error;
+            if (!isModelNotFoundError(error)) {
+                throw error;
+            }
+        }
+    }
+
+    if (lastError) throw lastError;
+    return '';
+};
+
 const extractCoachOutput = (payload) => {
     const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
     const audioChunks = [];
@@ -199,10 +248,11 @@ const updateSessionState = (userId, movement, updates) => {
 };
 
 const requestGeminiCoachAnalysis = async ({ movement, frameBase64, sessionState }) => {
+    // Use gemini-2.5-flash directly
     const model = genAI.getGenerativeModel({
-        model: supportedModel,
+        model: 'gemini-2.5-flash',
         generationConfig: {
-            maxOutputTokens: 80,
+            maxOutputTokens: 160,
             temperature: 0.4
         }
     });
@@ -242,8 +292,7 @@ Context:
 - Last feedback: "${sessionState.lastFeedback || 'none'}"
 - Current phase: ${sessionState.phase}
 
-Respond ONLY with valid JSON (no markdown, no backticks, no extra text):
-{"feedback": "your coaching cue here", "speak": true}`;
+Respond with ONLY one complete coaching sentence (no JSON, no markdown, no labels).`;
 
     const response = await model.generateContent([
         { text: prompt },
@@ -271,24 +320,17 @@ Respond ONLY with valid JSON (no markdown, no backticks, no extra text):
     }
 
     // Last resort: extract first sentence from raw text
-    console.log('[Coach Analysis] Using fallback extraction');
-    const sentences = responseText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    if (sentences.length > 0 && sentences[0].trim().length > 5) {
-        const firstSentence = sentences[0].trim()
-            .replace(/^["\s{[]/, '')
-            .replace(/["\s}\]]+$/, '')
-            .trim();
-
-        if (firstSentence.length > 2) {
-            return {
-                feedback: firstSentence,
-                speak: true
-            };
-        }
+    const rawFeedback = responseText.split('.')[0].trim();
+    if (rawFeedback && rawFeedback.length > 5 && !isBrokenCoachFragment(rawFeedback)) {
+        return {
+            feedback: rawFeedback + '.',
+            speak: true
+        };
     }
 
+    // Deterministic fallback keeps UX alive even if model output is truncated.
     return {
-        feedback: 'Keep your form steady.',
+        feedback: getCompleteCueFallback(movementKey),
         speak: true
     };
 };
@@ -525,6 +567,19 @@ const parseJsonObjectFromText = (text) => {
     }
 };
 
+const isBrokenCoachFragment = (text) => {
+    const value = String(text || '').trim().toLowerCase();
+    if (!value) return true;
+
+    if (/^\{.*$/.test(value) || /^["[{]/.test(value)) return true;
+    if (/^(feedback|comment|observed)\.?$/.test(value)) return true;
+
+    const alphaChars = (value.match(/[a-z]/g) || []).length;
+    if (alphaChars < 4) return true;
+
+    return false;
+};
+
 const ensureSentence = (text) => {
     const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
     if (!cleaned) return '';
@@ -553,6 +608,10 @@ const sanitizeCoachFeedback = (text) => {
         .replace(/^\s*["'{\[]+|["'}\]\s]+$/g, '')
         .replace(/\s+/g, ' ')
         .trim();
+
+    if (isBrokenCoachFragment(cleaned)) {
+        return '';
+    }
 
     return cleaned;
 };
@@ -654,28 +713,16 @@ exports.analyzeExercise = async (req, res) => {
             return res.status(502).json({ error: 'Coach returned malformed feedback.' });
         }
 
-        let feedbackRaw = sanitizeCoachFeedback(rawFeedback);
-
-        if (!isCompleteSentence(feedbackRaw)) {
-            const retryAnalysis = await requestGeminiCoachAnalysis({
-                movement: movementKey,
-                frameBase64: base64Data,
-                sessionState
-            });
-
-            if (retryAnalysis?.feedback && typeof retryAnalysis.feedback === 'string') {
-                feedbackRaw = sanitizeCoachFeedback(retryAnalysis.feedback);
-            }
-        }
-
-        if (!isCompleteSentence(feedbackRaw)) {
-            feedbackRaw = getLocalCorrection(movementKey);
-        }
-
-        let feedback = ensureSentence(feedbackRaw);
+        const feedback = sanitizeCoachFeedback(rawFeedback);
 
         if (!feedback) {
-            feedback = getLocalCorrection(movementKey);
+            return res.json({
+                correction: '',
+                audio: null,
+                mimeType: null,
+                filtered: true,
+                ttsStatus: 'empty'
+            });
         }
 
         // Filter: Avoid repeating the exact same feedback
@@ -700,16 +747,27 @@ exports.analyzeExercise = async (req, res) => {
         if (feedback) {
             console.log('[TTS Generation] Attempting TTS for:', feedback);
             try {
-                const ttsResponse = await requestGeminiTts(ttsModel, feedback);
-                if (ttsResponse.ok && ttsResponse.audio) {
+                let ttsResponse = null;
+                for (const modelName of ttsModelCandidates) {
+                    ttsResponse = await requestGeminiTts(modelName, feedback);
+                    if (ttsResponse.ok && ttsResponse.audio) {
+                        break;
+                    }
+                }
+
+                if (ttsResponse?.ok && ttsResponse.audio) {
                     // Normalize audio to WAV format for browser compatibility
                     const normalized = normalizePlayableAudio(ttsResponse.audio, ttsResponse.mimeType);
                     audioBase64 = normalized.audio;
                     audioMimeType = normalized.mimeType;
                     console.log('[TTS Generation] Success, audio size:', audioBase64.length, 'bytes, mime:', audioMimeType);
                 } else {
-                    ttsStatus = ttsResponse?.status === 429 ? 'quota' : 'error';
-                    console.log('[TTS Generation] Failed, response:', ttsResponse.status, ttsResponse.body?.substring?.(0, 200));
+                    if (isTextOnlyModelError(ttsResponse?.body) || isTtsInstructionError(ttsResponse?.body)) {
+                        ttsStatus = 'unsupported_model';
+                    } else {
+                        ttsStatus = ttsResponse?.status === 429 ? 'quota' : 'error';
+                    }
+                    console.log('[TTS Generation] Failed, response:', ttsResponse?.status, ttsResponse?.body?.substring?.(0, 200));
                 }
             } catch (ttsError) {
                 ttsStatus = 'error';
@@ -739,10 +797,19 @@ exports.commitments = async (req, res) => {
     };
 
     const commitments = await Commitment.find({ user: req.user.id }).sort({ createdAt: -1 });
-    const enrichedCommitments = commitments.map((item) => ({
-        ...item.toObject(),
-        escalationMessage: escalationCopy[Math.min(item.escalationLevel, escalationCopy.length - 1)]
-    }));
+    const enrichedCommitments = commitments.map((item) => {
+        const rawTitle = (item.title || '').trim();
+        const sanitizedTitle = rawTitle
+            .replace(/^here\s+(are|is)\s+/i, '')
+            .replace(/\.$/, '')
+            .trim();
+
+        return {
+            ...item.toObject(),
+            title: sanitizedTitle.length >= 3 ? sanitizedTitle : rawTitle || 'Daily Commitment',
+            escalationMessage: escalationCopy[Math.min(item.escalationLevel, escalationCopy.length - 1)]
+        };
+    });
 
     const totalCommitments = commitments.length;
     const activeCommitments = commitments.filter(c => c.status === 'active').length;
@@ -751,13 +818,8 @@ exports.commitments = async (req, res) => {
     let aiTip = "Keep up the great work!";
     if (genAI) {
         try {
-            const model = genAI.getGenerativeModel({
-                model: supportedModel,
-                generationConfig: { maxOutputTokens: 120 }
-            });
             const prompt = `As an AI habit coach, provide a brief, encouraging tip for this user based on their habits: ${enrichedCommitments.map(c => `${c.title} (streak: ${c.streak} days)`).join(', ')}. Focus on motivation and one actionable suggestion. Keep under 80 words.`;
-            const result = await model.generateContent(prompt);
-            const aiText = result.response.text().trim();
+            const aiText = await generateTextWithFallback(prompt, 120);
             if (aiText) {
                 aiTip = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             }
@@ -779,7 +841,17 @@ exports.commitments = async (req, res) => {
 };
 
 exports.addCommitment = async (req, res) => {
-    let title = (req.body.title || '').trim();
+    const normalizeTitle = (raw) => {
+        const cleaned = (raw || '')
+            .trim()
+            .replace(/^here\s+(are|is)\s+/i, '')
+            .replace(/\.$/, '')
+            .trim();
+        return cleaned.length >= 3 ? cleaned : '';
+    };
+
+    const originalTitle = normalizeTitle(req.body.title || '');
+    let title = originalTitle;
     if (!title) {
         return res.redirect('/dashboard/commitments');
     }
@@ -787,15 +859,13 @@ exports.addCommitment = async (req, res) => {
     // Use AI to refine the title
     if (genAI) {
         try {
-            const model = genAI.getGenerativeModel({
-                model: supportedModel,
-                generationConfig: { maxOutputTokens: 80 }
-            });
             const prompt = `Refine this habit/commitment title to be more specific, actionable, and achievable: "${title}". Keep it concise, under 50 words.`;
-            const result = await model.generateContent(prompt);
-            const refinedTitle = result.response.text().trim();
+            const refinedTitle = await generateTextWithFallback(prompt, 80);
             if (refinedTitle && refinedTitle.length < 100) {
-                title = refinedTitle;
+                const cleanedTitle = normalizeTitle(refinedTitle);
+                if (cleanedTitle) {
+                    title = cleanedTitle;
+                }
             }
         } catch (error) {
             console.log('AI title refinement failed:', error);

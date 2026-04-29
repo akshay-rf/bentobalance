@@ -1,0 +1,90 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Goal Planner</h1>
+            <p><%= completedGoals %> completed out of <%= goals.length %> total goals</p>
+        </div>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h4 class="mb-3">Add New Goal</h4>
+        <form action="/dashboard/goals" method="POST" class="row g-3">
+            <div class="col-md-4">
+                <input name="title" class="form-control" placeholder="Goal title" required>
+            </div>
+            <div class="col-md-3">
+                <select name="goalType" class="form-select">
+                    <option value="nutrition">Nutrition</option>
+                    <option value="fitness">Fitness</option>
+                    <option value="habit">Habit</option>
+                    <option value="weight">Weight</option>
+                    <option value="custom" selected>Custom</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="number" step="0.01" name="targetValue" class="form-control" placeholder="Target" required>
+            </div>
+            <div class="col-md-2">
+                <input name="unit" class="form-control" placeholder="Unit (kg, g)">
+            </div>
+            <div class="col-md-1 d-grid">
+                <button class="btn btn-primary">Add</button>
+            </div>
+            <div class="col-12">
+                <textarea name="description" class="form-control" placeholder="Optional description" rows="2"></textarea>
+            </div>
+        </form>
+    </div>
+
+    <div class="row g-3">
+        <% if (goals.length === 0) { %>
+            <div class="col-12">
+                <div class="card p-4 text-center">
+                    <h5>No goals yet</h5>
+                    <p class="mb-0">Create one above to start tracking measurable progress.</p>
+                </div>
+            </div>
+        <% } %>
+        <% goals.forEach((goal) => { %>
+            <div class="col-md-6">
+                <div class="card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-0"><%= goal.title %></h5>
+                        <span class="badge text-bg-<%= goal.status === 'completed' ? 'success' : goal.status === 'paused' ? 'warning' : 'primary' %>">
+                            <%= goal.status %>
+                        </span>
+                    </div>
+                    <p class="mb-2 text-muted"><%= goal.description || 'No description' %></p>
+                    <p class="mb-2">
+                        Progress: <strong><%= Math.round(goal.progress || 0) %>%</strong>
+                        (<%= goal.currentValue || 0 %> / <%= goal.targetValue || 0 %> <%= goal.unit || '' %>)
+                    </p>
+                    <div class="progress mb-3" role="progressbar" aria-label="Goal progress">
+                        <div class="progress-bar" style="width: <%= Math.round(goal.progress || 0) %>%"></div>
+                    </div>
+
+                    <form action="/dashboard/goals/<%= goal._id %>/update" method="POST" class="row g-2 mb-2">
+                        <div class="col-5">
+                            <input type="number" step="0.01" name="currentValue" class="form-control" placeholder="Current value">
+                        </div>
+                        <div class="col-4">
+                            <select name="status" class="form-select">
+                                <option value="active">Active</option>
+                                <option value="completed">Completed</option>
+                                <option value="paused">Paused</option>
+                                <option value="abandoned">Abandoned</option>
+                            </select>
+                        </div>
+                        <div class="col-3 d-grid">
+                            <button class="btn btn-outline-primary">Update</button>
+                        </div>
+                    </form>
+
+                    <form action="/dashboard/goals/<%= goal._id %>/delete" method="POST" class="d-grid">
+                        <button class="btn btn-outline-danger">Delete Goal</button>
+                    </form>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+</div>

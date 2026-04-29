@@ -1,0 +1,36 @@
+<div class="container-fluid container-fluid-custom pb-5 mb-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><%= userName %>'s Achievements</h1>
+            <p class="mb-0">Progress: <strong><%= badges.length %> / <%= totalBadges %></strong> unlocked</p>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <% Object.keys(allBadgeTypes).forEach((badgeKey) => { 
+            const definition = allBadgeTypes[badgeKey];
+            const unlockedBadge = badges.find((b) => b.badgeType === badgeKey);
+            const displayTitle = String(definition.title || '')
+                .replace(/^[^\p{L}\p{N}]+/u, '')
+                .trim();
+        %>
+            <div class="col-md-4">
+                <div class="card p-4 h-100 <%= unlockedBadge ? '' : 'badge-locked' %>">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="achievement-icon"><%= definition.icon %></span>
+                        <% if (unlockedBadge) { %>
+                            <span class="badge text-bg-success">Unlocked</span>
+                        <% } else { %>
+                            <span class="badge text-bg-secondary">Locked</span>
+                        <% } %>
+                    </div>
+                    <h5><%= displayTitle %></h5>
+                    <p class="mb-2"><%= definition.description %></p>
+                    <% if (unlockedBadge) { %>
+                        <small class="text-muted">Unlocked on <%= new Date(unlockedBadge.unlockedAt).toLocaleDateString() %></small>
+                    <% } %>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+</div>

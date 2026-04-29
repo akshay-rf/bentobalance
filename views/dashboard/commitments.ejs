@@ -48,8 +48,8 @@
             <% commitments.forEach((item) => { %>
                 <div class="col-lg-4 mb-3">
                     <div class="card p-3 h-100">
-                        <h5><%= item.title %></h5>
-                        <p class="mb-1"><strong>Target:</strong> <%= item.dailyTarget %></p>
+                        <h5><%= item.title && item.title.trim() ? item.title : 'Daily Commitment' %></h5>
+                        <p class="mb-1"><strong>Target:</strong> <%= item.dailyTarget || 'Complete once daily' %></p>
                         <p class="mb-1"><strong>Reminder:</strong> <%= item.reminderTime %></p>
                         <p class="mb-1"><strong>Streak:</strong> <%= item.streak %> day(s) <%= '🔥'.repeat(Math.min(item.streak, 5)) %></p>
                         <p class="mb-1"><strong>Missed:</strong> <%= item.missedCount %></p>

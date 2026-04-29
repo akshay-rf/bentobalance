@@ -4,7 +4,9 @@ const User = require('../models/User');
 const { syncClerkUser } = require('../services/userSync');
 
 const clerkClient = process.env.CLERK_SECRET_KEY ? createClerkClient({
-    secretKey: process.env.CLERK_SECRET_KEY
+    secretKey: process.env.CLERK_SECRET_KEY,
+    skippedTokenVerification: false,
+    strictErrorHandling: false
 }) : null;
 
 const wantsJson = (req) => {
@@ -28,7 +30,14 @@ exports.isLoggedIn = async function(req, res, next){
             return next();
         }
 
-        const { userId } = getAuth(req);
+        // Prefer auth data attached by clerkMiddleware for regular form submissions.
+        // This is more reliable than re-parsing auth context on every request.
+        let userId = req.auth?.userId;
+        if (!userId) {
+            const auth = getAuth(req);
+            userId = auth?.userId;
+        }
+
         if (!userId) {
             return rejectUnauthorized(req, res);
         }
@@ -45,6 +54,13 @@ exports.isLoggedIn = async function(req, res, next){
         req.user = user;
         return next();
     } catch (error) {
+        // Handle clock skew errors
+        if (error.message && (error.message.includes('iat') || error.message.includes('clock skew'))) {
+            console.warn('JWT Clock Skew Error - Verify system clocks are synchronized:', {
+                message: error.message,
+                timestamp: new Date().toISOString()
+            });
+        }
         console.error('Auth error:', {
             message: error.message,
             code: error.code,

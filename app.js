@@ -14,6 +14,7 @@ app.use((req, res, next) => {
     next();
 });
 const port = process.env.PORT || 5000;
+const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
 
 app.use(express.urlencoded({extended:true}));
 app.use(express.json({ limit: '1mb' }));
@@ -22,11 +23,27 @@ app.use(clerkMiddleware({
     publishableKey: getClerkPublishableKey(),
     secretKey: process.env.CLERK_SECRET_KEY,
     authorizedParties: [
-        process.env.BASE_URL || 'http://localhost:3000',
+        baseUrl,
+        'http://localhost:3000',
         'http://localhost:8000',
+        'localhost:3000',
+        'localhost:8000',
         process.env.DOMAIN || 'localhost'
     ]
 }));
+
+// Debug middleware to log JWT details
+app.use((req, res, next) => {
+    if (req.headers.authorization) {
+        console.log('[Auth] Request received:', {
+            timestamp: new Date().toISOString(),
+            path: req.path,
+            hasAuth: !!req.auth,
+            userId: req.auth?.userId
+        });
+    }
+    next();
+});
 
 connectDB()
 
@@ -48,5 +65,20 @@ app.get('*', function(req, res){
 })
 
 app.listen(port, ()=>{
-    console.log(`App listening on port ${port}`);
-})
+    console.log(`🚀 BentoBalance server is running on port ${port}`);
+    console.log(`📱 Access at: http://localhost:${port}`);
+}).on('error', (err) => {
+    console.error('❌ Failed to start server:', err.message);
+    process.exit(1);
+});
+
+// Graceful shutdown handling
+process.on('SIGINT', () => {
+    console.log('\n🛑 Shutting down BentoBalance server gracefully...');
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('\n🛑 Shutting down BentoBalance server gracefully...');
+    process.exit(0);
+});

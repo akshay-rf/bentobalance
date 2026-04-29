@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,700;1,100&family=Unbounded:wght@200..900&display=swap" rel="stylesheet">
 
 </head>
-<body class="d-flex flex-column h-100">
+<body class="page-shell d-flex flex-column h-100">
 
     <%- include('../partials/header_dashboard.ejs') %>
     <%- body %>
@@ -20,6 +20,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js/dist/clerk.browser.js"></script>
     <script>
         window.addEventListener('load', async () => {
@@ -29,7 +30,8 @@
                 const refreshSession = async () => {
                     try {
                         if (window.Clerk.session) {
-                            await window.Clerk.session.getToken({ skipCache: true });
+                            // Avoid forced refresh loops; use Clerk cache unless needed.
+                            await window.Clerk.session.getToken();
                         }
                     } catch (error) {
                         console.warn('Clerk periodic token refresh failed:', error?.message || error);
@@ -45,6 +47,29 @@
                         refreshSession();
                     }
                 });
+
+                // Keep auth warm right before any form POST so dashboard actions
+                // don't fail due to token/session timing during long sessions.
+                document.addEventListener('submit', async (event) => {
+                    const form = event.target;
+                    if (!form || form.tagName !== 'FORM') return;
+
+                    const method = String(form.method || 'GET').toUpperCase();
+                    const needsAuthRefresh = method !== 'GET' || form.action.includes('/dashboard');
+                    if (!needsAuthRefresh) return;
+
+                    if (form.dataset.sessionRefreshed === '1') return;
+
+                    event.preventDefault();
+                    try {
+                        await refreshSession();
+                    } catch (error) {
+                        console.warn('Pre-submit auth refresh failed:', error?.message || error);
+                    } finally {
+                        form.dataset.sessionRefreshed = '1';
+                        form.submit();
+                    }
+                }, true);
             }
         });
     </script>

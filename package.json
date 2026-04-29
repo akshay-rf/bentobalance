@@ -1,19 +1,29 @@
 {
-  "name": "final",
+  "name": "bentobalance",
   "version": "1.0.0",
+  "description": "A comprehensive meal tracking and fitness commitment web application built with Node.js, Express, and MongoDB. Features user authentication, meal logging, fitness coaching, and personalized dashboards.",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "meal-tracking",
+    "fitness",
+    "nodejs",
+    "express",
+    "mongodb",
+    "ejs",
+    "clerk-auth"
+  ],
+  "author": "Your Name",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@clerk/backend": "^3.2.9",
     "@clerk/express": "^2.1.1",
-    "@google/generative-ai": "^0.19.0",
+    "@google/generative-ai": "^0.21.0",
+    "chart.js": "^4.5.1",
     "connect-mongo": "^5.1.0",
     "cookie": "^1.1.1",
     "dotenv": "^16.4.5",

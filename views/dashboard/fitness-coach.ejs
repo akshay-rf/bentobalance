@@ -82,28 +82,35 @@
         return URL.createObjectURL(blob);
     };
 
-    const refreshClerkSessionToken = async () => {
-        if (!window.Clerk) return;
+    let cachedSessionToken = null;
+    let cachedTokenAt = 0;
+    const TOKEN_TTL_MS = 45 * 1000;
+
+    const getClerkSessionToken = async ({ forceRefresh = false } = {}) => {
+        if (!window.Clerk) return null;
+
+        const now = Date.now();
+        if (!forceRefresh && cachedSessionToken && (now - cachedTokenAt) < TOKEN_TTL_MS) {
+            return cachedSessionToken;
+        }
+
         try {
             if (!window.Clerk.loaded) {
                 await window.Clerk.load();
             }
-            if (window.Clerk.session) {
-                await window.Clerk.session.getToken({ skipCache: true });
+            if (!window.Clerk.session) {
+                cachedSessionToken = null;
+                return null;
             }
+
+            const token = await window.Clerk.session.getToken({ skipCache: forceRefresh });
+            cachedSessionToken = token || null;
+            cachedTokenAt = Date.now();
+            return cachedSessionToken;
         } catch (error) {
             console.warn('Clerk token refresh failed:', error?.message || error);
+            return null;
         }
-    };
-
-    const speakWithBrowserTts = (text) => {
-        if (!('speechSynthesis' in window)) return false;
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-        return true;
     };
 
     const analyzeFrame = async () => {
@@ -122,13 +129,14 @@
         analyzeInFlight = true;
 
         try {
-            await refreshClerkSessionToken();
+            const sessionToken = await getClerkSessionToken();
 
             let response = await fetch('/dashboard/fitness-coach/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
                 },
                 credentials: 'same-origin',
                 body: JSON.stringify({
@@ -139,12 +147,13 @@
 
             // Retry once after forced token refresh before failing as expired
             if (response.status === 401 || response.status === 403) {
-                await refreshClerkSessionToken();
+                const freshToken = await getClerkSessionToken({ forceRefresh: true });
                 response = await fetch('/dashboard/fitness-coach/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...(freshToken ? { Authorization: `Bearer ${freshToken}` } : {})
                     },
                     credentials: 'same-origin',
                     body: JSON.stringify({
@@ -214,6 +223,8 @@
                 
                 audioUrlRef = base64ToBlobUrl(result.audio, mimeType);
                 audioRef = new Audio(audioUrlRef);
+                audioRef.preload = 'auto';
+                audioRef.setAttribute('playsinline', 'true');
                 
                 // Add error handling for audio playback
                 audioRef.onerror = (error) => {
@@ -230,14 +241,11 @@
                     voiceStatus.textContent = 'Playing feedback...';
                 } catch (playError) {
                     console.error('Audio play() failed:', playError);
-                    voiceStatus.textContent = 'Failed to play audio: ' + playError.message;
+                    voiceStatus.textContent = 'Failed to play Gemini audio: ' + playError.message;
                 }
             } else {
-                if (result.correction && (result.ttsStatus === 'quota' || result.ttsStatus === 'error')) {
-                    const spoke = speakWithBrowserTts(result.correction);
-                    voiceStatus.textContent = spoke
-                        ? 'Using browser voice (Gemini TTS quota reached).'
-                        : 'Gemini TTS unavailable right now.';
+                if (result.correction && (result.ttsStatus === 'quota' || result.ttsStatus === 'error' || result.ttsStatus === 'unsupported_model')) {
+                    voiceStatus.textContent = 'Gemini TTS unavailable right now.';
                 } else {
                     voiceStatus.textContent = 'No audio (text-only feedback).';
                 }
@@ -301,6 +309,9 @@
         if (audioRef) {
             audioRef.pause();
             audioRef = null;
+        }
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
         }
         if (audioUrlRef) {
             URL.revokeObjectURL(audioUrlRef);

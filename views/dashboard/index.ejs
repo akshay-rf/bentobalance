@@ -4,43 +4,218 @@
             <h1>Hey, <%- userName %></h1>
         </div>
         <div class="col text-end">
-            <a type="button" class="btn btn-primary me2" data-bs-toggle="modal" id="addButton" data-bs-target="#addModal">+ Add Meal</a>
+            <a href="/dashboard/meals" class="btn btn-primary">Open Meals Section</a>
         </div>
     </div>
     <div class="row mb-4">
         <div class="col-12">
             <div class="card p-4 overview-card shadow-sm">
-                <div class="row align-items-center gy-3">
-                    <div class="col-md-4">
-                        <div class="overview-panel p-4 h-100">
-                            <h5 class="mb-2">Quick Actions</h5>
-                            <p class="mb-0">Jump into your workout coach or habit tracker without leaving your dashboard.</p>
+                <div class="mb-3">
+                    <h5 class="mb-2">Quick Actions</h5>
+                    <p class="mb-0">Jump into your core BentoBalance modules directly from the dashboard.</p>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card feature-card h-100 p-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3">🍱</div>
+                                <div>
+                                    <h5 class="mb-1">Meals</h5>
+                                    <p class="small mb-0">Browse, add, and manage your complete meal log.</p>
+                                </div>
+                            </div>
+                            <a href="/dashboard/meals" class="btn btn-outline-primary btn-sm">Open</a>
                         </div>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card feature-card h-100 p-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3">💪</div>
+                                <div>
+                                    <h5 class="mb-1">AI Form Coach</h5>
+                                    <p class="small mb-0">Real-time exercise guidance while you train at home.</p>
+                                </div>
+                            </div>
+                            <a href="/dashboard/fitness-coach" class="btn btn-outline-primary btn-sm">Open</a>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card feature-card h-100 p-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3">🧠</div>
+                                <div>
+                                    <h5 class="mb-1">Habit Tracker</h5>
+                                    <p class="small mb-0">Commit to habits, track streaks, and stay consistent.</p>
+                                </div>
+                            </div>
+                            <a href="/dashboard/commitments" class="btn btn-outline-primary btn-sm">Open</a>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card feature-card h-100 p-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3">🎯</div>
+                                <div>
+                                    <h5 class="mb-1">Goal Planner</h5>
+                                    <p class="small mb-0">Set measurable targets and monitor completion percentage.</p>
+                                </div>
+                            </div>
+                            <a href="/dashboard/goals" class="btn btn-outline-primary btn-sm">Open</a>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card feature-card h-100 p-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3">📈</div>
+                                <div>
+                                    <h5 class="mb-1">Body Metrics</h5>
+                                    <p class="small mb-0">Track weight and composition trends with visual charts.</p>
+                                </div>
+                            </div>
+                            <a href="/dashboard/body-metrics" class="btn btn-outline-primary btn-sm">Open</a>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card feature-card h-100 p-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3">🏅</div>
+                                <div>
+                                    <h5 class="mb-1">Achievements</h5>
+                                    <p class="small mb-0">Unlock badges based on streaks and activity milestones.</p>
+                                </div>
+                            </div>
+                            <a href="/dashboard/achievements" class="btn btn-outline-primary btn-sm">Open</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Active Goals</h5>
+                <p class="display-6 mb-0"><%= activeGoals || 0 %></p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Badges Unlocked</h5>
+                <p class="display-6 mb-0"><%= badgesUnlocked || 0 %></p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Longest Streak</h5>
+                <p class="display-6 mb-0"><%= longestStreak || 0 %> days</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Latest Weight</h5>
+                <p class="display-6 mb-0">
+                    <%= latestWeight ? `${latestWeight} kg` : 'Not set' %>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Total Meals</h5>
+                <p class="display-6 mb-0"><%= totalMeals || 0 %></p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Meals This Week</h5>
+                <p class="display-6 mb-0"><%= mealsThisWeek || 0 %></p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Avg Calories/Meal</h5>
+                <p class="display-6 mb-0"><%= avgCaloriesPerMeal || 0 %></p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 text-center">
+                <h5 class="mb-1">Metrics Entries</h5>
+                <p class="display-6 mb-0"><%= metricsLogged || 0 %></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card p-4 h-100">
+                <h4 class="mb-3">Progress Snapshot</h4>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Goals Completed</span>
+                    <strong><%= completedGoals || 0 %></strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Active Commitments</span>
+                    <strong><%= activeCommitments || 0 %></strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Badges Unlocked</span>
+                    <strong><%= badgesUnlocked || 0 %></strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Best Streak</span>
+                    <strong><%= longestStreak || 0 %> days</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card p-4 h-100">
+                <h4 class="mb-3">Weekly Momentum</h4>
+                <p class="mb-2">Meals logged this week: <strong><%= mealsThisWeek || 0 %></strong></p>
+                <div class="progress mb-3" role="progressbar" aria-label="Weekly meals progress">
+                    <div class="progress-bar" style="width: <%= Math.min(100, (mealsThisWeek || 0) * 14) %>%"></div>
+                </div>
+                <p class="mb-0 text-muted">Tip: 7+ meals/week indicates consistent tracking habit for demo-worthy progress.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card p-4 fade-in">
+                <h3 class="mb-4 gradient-text">Nutrition Analytics</h3>
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <div class="chart-panel p-3">
+                            <canvas id="nutritionChart" class="dashboard-chart" width="360" height="260"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
                         <div class="row g-3">
-                            <div class="col-sm-6">
-                                <div class="card feature-card h-100 p-3">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="feature-icon me-3">💪</div>
-                                        <div>
-                                            <h5 class="mb-1">AI Form Coach</h5>
-                                            <p class="small mb-0">Real-time exercise guidance while you train at home.</p>
-                                        </div>
-                                    </div>
-                                    <a href="/dashboard/fitness-coach" class="btn btn-outline-primary btn-sm">Open</a>
+                            <div class="col-6">
+                                <div class="card text-center p-3 glass-effect">
+                                    <h4 class="text-primary"><%= totalCalories || 0 %></h4>
+                                    <p class="mb-0">Total Calories</p>
                                 </div>
                             </div>
-                            <div class="col-sm-6">
-                                <div class="card feature-card h-100 p-3">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="feature-icon me-3">🧠</div>
-                                        <div>
-                                            <h5 class="mb-1">Habit Tracker</h5>
-                                            <p class="small mb-0">Commit to habits, track streaks, and stay consistent.</p>
-                                        </div>
-                                    </div>
-                                    <a href="/dashboard/commitments" class="btn btn-outline-primary btn-sm">Open</a>
+                            <div class="col-6">
+                                <div class="card text-center p-3 glass-effect">
+                                    <h4 class="text-primary"><%= totalProtein || 0 %>g</h4>
+                                    <p class="mb-0">Total Protein</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card text-center p-3 glass-effect">
+                                    <h4 class="text-primary"><%= totalFat || 0 %>g</h4>
+                                    <p class="mb-0">Total Fat</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card text-center p-3 glass-effect">
+                                    <h4 class="text-primary"><%= totalCarbs || 0 %>g</h4>
+                                    <p class="mb-0">Total Carbs</p>
                                 </div>
                             </div>
                         </div>
@@ -49,128 +224,61 @@
             </div>
         </div>
     </div>
-
-    <div class="row">
-        <% if(meals.length > 0) { for(var i=0; i<meals.length; i++) { %>
-
-            <div class="col-sm-3 mb-4">
-                <div class="card" style="min-height: 210px">
-                    <a href="/dashboard/item/<%= meals[i]._id %>" class="card-body text-decoration-none">
-                        <h5 class="card-title"><%= meals[i].name %></h5>
-                        <table class="table">
-                            <thead>
-                              <tr>
-                                <th scope="col">Net</th>
-                                <th scope="col">Value</th>
-
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <th scope="row">Calories</th>
-                                <td><%= meals[i].netinf[0] %> Cal</td>
-                              </tr>
-                              <tr>
-                                <th scope="row">Protein</th>
-                                <td><%= meals[i].netinf[1] %> g</td>
-                              </tr>
-                              <tr>
-                                <th scope="row">Fat</th>
-                                <td><%= meals[i].netinf[2] %> g</td>
-                              </tr>
-                              <tr>
-                                <th scope="row">Carbs</th>
-                                <td><%= meals[i].netinf[3] %> g</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                    </a>
-                </div>
-            </div>
-       <% }} else { %>
-
-        <div class="row">
-            <div class="col-3">
-                <img src="img/human-3.svg" alt="human pointing hand">
-            </div>
-        
-            <div class="col mt-md-4">
-                <h2>Okay...</h2>
-                <h4>Let's start with your first meal!<br/><br/>
-                <a href="/dashboard/add" data-bs-toggle="modal" id="createButton" data-bs-target="#addModal">Create One!</a> </h4>
-            </div>
-        </div>
-    <% } %>
-    </div>
-
-    <% if(meals.length > 0) { %>
-        <nav aria-label="Page navigation example">
-            <ul class="pagination justify-content-center mt-5">
-
-                <% if(current == 1) { %>
-                    <li class="page-item"><a class="page-link" href="#">Previous</a></li>
-                <% } else { %>
-                    <li class="page-item"><a class="page-link" href="/">First</a></li>
-                <% } %>
-
-                <% var i = (Number(current) > 5 ? Number(current) - 4 : 1) %>
-                <% if(i !== 1) { %>
-                    <li class="page-item"><a class="page-link" href="#">...</a></li>
-                <% } %>
-
-                <% for(; i <= (Number(current) + 4) && i <= pages; i++) { %>
-
-                    <% if(i == current)  { %>
-                        <li class="page-item"><a class="page-link" href="#"><%= i %></a></li>
-
-                    <% } else { %>
-                        <li class="page-item"><a class="page-link" href="/dashboard/?page=<%= i %>"><%= i %></a></li>
-                    <% } %>
-
-                    <% if (i == Number(current) + 4 && i < pages) { %>
-                        <li class="page-item"><a class="page-link" href="#">...</a></li>
-                    <% } %>
-
-                    <% if(i == Number(current) + 4 && i < pages) { %>
-                        <li class="page-item"><a class="page-link" href="#">...</a></li>
-                    <% } %>
-
-                <% } %>
-
-                <% if (current == pages) { %>
-                    <li class="page-item disabled"><a class="page-link">Last</a></li>
-                <% } else { %>
-                    <li class="page-item"><a href="/dashboard/?page=<%= pages %>" class="page-link">Next</a></li>
-                <% } %>
-            </ul>
-        </nav>
-    <% } %>
-
-
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('nutritionChart').getContext('2d');
+    const nutritionData = {
+        labels: ['Protein', 'Fat', 'Carbs'],
+        datasets: [{
+            label: 'Grams',
+            data: [<%= totalProtein || 0 %>, <%= totalFat || 0 %>, <%= totalCarbs || 0 %>],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 205, 86, 0.8)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 205, 86, 1)'
+            ],
+            borderWidth: 2,
+            hoverOffset: 10
+        }]
+    };
 
+    const config = {
+        type: 'doughnut',
+        data: nutritionData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: {
+                            family: 'Poppins',
+                            size: 14
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed + 'g';
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
+            }
+        }
+    };
 
-
-<div class="modal fade" tabindex="-1" id="addModal">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Upload photo of meal</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <form action="/dashboard/upload" method="POST" enctype="multipart/form-data" class="position-relative">
-        <div class="modal-body">
-            <div class="input-group mb-3">
-                <input type="file" class="form-control" accept="image/*" name="image" id="imageUpload" required>
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          
-          <button type="submit" class="btn btn-primary">Upload</button>
-        </form>
-        </div>
-      </div>
-    </div>
-</div>
+    new Chart(ctx, config);
+});
+</script>
